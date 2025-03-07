@@ -10,6 +10,22 @@ class DB():
         self.engine = sa.create_engine(
             f"postgresql+psycopg2://{env('PG_USER')}:{env('PG_PASSWORD')}@{env('PG_HOST')}:5432/{env('PG_DATABASE')}")
 
+    def execute_query(self, query: str, params: dict = {}, commit: bool = False):
+        with self.engine.connect() as conn:
+            res = conn.execute(sa.text(query), parameters=params)
+            if commit:
+                conn.commit()
+            else:
+                return [dict(row._mapping) for row in res.fetchall()]
+            return None
+
+    def get_task_by_id(self, task_id: int) -> Task:
+        query = f"""
+            SELECT * FROM tasks
+            WHERE id = :id
+        """
+        return Task(**self.execute_query(query=query, params={"id": task_id})[0])
+
     def get_tasks(self, status_filter: list, order: str) -> list:
         status_filter_clause = f"WHERE status = ANY(ARRAY{status_filter})" if status_filter else ""
 
@@ -23,13 +39,10 @@ class DB():
             {status_filter_clause}
             ORDER BY name {name_order}, deadline {deadline_order}
         """
-
-        with self.engine.connect() as conn:
-            res = conn.execute(sa.text(query))
-            return res
+        return self.execute_query(query=query)
 
     def create_task(self, task_data: Task) -> None:
-        insert_string = sa.text("""
+        query = """
             INSERT INTO tasks(name, description, status, deadline, created_by)
             VALUES(
                 :name,
@@ -38,40 +51,34 @@ class DB():
                 :deadline,
                 :created_by
             )
-        """)
-        with self.engine.connect() as conn:
-            conn.execute(insert_string, {
-                "name": task_data.name,
-                "description": task_data.description,
-                "status": task_data.status,
-                "deadline": task_data.deadline,
-                "created_by": task_data.created_by
-            })
-            conn.commit()
+        """
+        return self.execute_query(query, {
+            "name": task_data.name,
+            "description": task_data.description,
+            "status": task_data.status,
+            "deadline": task_data.deadline,
+            "created_by": task_data.created_by
+        }, commit=True)
 
     def update_task(self, task_id: int, task_data: Task) -> None:
         task_data_dict = dict(task_data)
         del task_data_dict["id"]
-        update_string = sa.text(f"""
+        query = f"""
             UPDATE tasks
             SET {', '.join([f"{column} = :{column}" for column in task_data_dict.keys()])}
             WHERE id = :id
-        """)
+        """
         params = task_data_dict.copy()
         params['id'] = task_id
-        with self.engine.connect() as conn:
-            conn.execute(update_string, params)
-            conn.commit()
+        return self.execute_query(query=query, params=params, commit=True)
 
     def change_status(self, task_id: int, status: int) -> None:
-        update_string = sa.text("""
+        query = """
             UPDATE tasks
             SET status = :status
             WHERE id = :task_id
-        """)
-        with self.engine.connect() as conn:
-            conn.execute(update_string, {
-                "status": status,
-                "task_id": task_id
-            })
-            conn.commit()
+        """
+        return self.execute_query(query, {
+            "status": status,
+            "task_id": task_id
+        }, commit=True)
