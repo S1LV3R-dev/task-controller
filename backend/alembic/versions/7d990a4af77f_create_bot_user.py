@@ -20,7 +20,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     op.execute(
-        "INSERT INTO users(id, name, email, password) VALUES (0, 'bot', 'bot@task_controller.com', 'no_pass')"
+        "INSERT INTO users(id, username, email, password) VALUES (0, 'bot', 'bot@task_controller.com', 'no_pass')"
     )
 
 

@@ -82,3 +82,51 @@ class DB():
             "status": status,
             "task_id": task_id
         }, commit=True)
+
+    def login(self, login_str: str, password_hash: str):
+        query = """
+            SELECT * FROM users
+            WHERE username = :login_str
+            OR
+            email = :login_str
+        """
+        res = self.execute_query(query=query, params={"login_str": login_str})
+        if not res or res[0]['password'] != password_hash:
+            return False
+        else:
+            return res[0]
+
+    def register(self, username: str, email: str, password_hash: str):
+        query = """
+            SELECT * FROM users
+            WHERE 
+            email = :email
+        """
+        res = self.execute_query(query=query, params={
+            "email": email
+        })
+        if res:
+            return False
+        query = """
+            INSERT INTO users(username, email, password)
+            VALUES(
+                :username,
+                :email,
+                :password
+            )
+            ON CONFLICT DO NOTHING
+        """
+        self.execute_query(query=query, params={
+            "username": username,
+            "email": email,
+            "password": password_hash
+        }, commit=True)
+        query = """
+            SELECT * FROM users
+            WHERE 
+            email = :email
+        """
+        res = self.execute_query(query=query, params={
+            "email": email
+        })
+        return res[0]
