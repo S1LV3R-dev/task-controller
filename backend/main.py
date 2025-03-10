@@ -2,6 +2,8 @@ from typing import List
 from hashlib import md5
 from datetime import datetime, timedelta
 import json
+import logging
+import os
 
 from fastapi import FastAPI, Query, Body, Request, status, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
@@ -10,6 +12,7 @@ from db import DB
 import jwt
 
 from configs import Task, JWT_SECRET_KEY
+
 
 class ConnectionManager:
     def __init__(self):
@@ -37,6 +40,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+LOG_DIR = "logs"
+os.makedirs(LOG_DIR, exist_ok=True)
+
+log_filename = datetime.now().strftime("%d-%m-%Y.log")
+log_filepath = os.path.join(LOG_DIR, log_filename)
+logging.basicConfig(
+    filename=log_filepath,
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+
+logging.info("Server started")
 
 def gen_token(user_id: int) -> str:
     return f"""{user_id}:{str(jwt.encode({
@@ -113,6 +129,12 @@ async def check_cookie_middleware(request: Request, call_next):
                             httponly=True, max_age=4000)
     return response
 
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    response = await call_next(request)
+    logging.info(f"{request.method} {request.url.path} - {response.status_code}")
+    return response
+
 @app.post('/register')
 def register(
     username: str = Body(...),
@@ -164,7 +186,6 @@ def get_tasks(task_id: int):
 def create_task(request: Request, task_data: Task):
     user_id, _ = request.cookies.get("token").split(":")
     task = db.create_task(task_data=task_data, creator=user_id)
-    print(task[0])
     return JSONResponse([{key: str(value) for key, value in task[0].items()}], status_code=status.HTTP_200_OK)
 
 @app.put('/tasks/{task_id}')
