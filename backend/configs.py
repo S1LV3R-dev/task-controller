@@ -17,6 +17,6 @@ class Task(BaseModel):
     description: str
     deadline: datetime
     status: int = STATUS.NEW
-    created_by: int
+    created_by: int = 0
 
 JWT_SECRET_KEY = str(env("JWT_SECRET_KEY"))

@@ -15,33 +15,30 @@ class DB():
             res = conn.execute(sa.text(query), parameters=params)
             if commit:
                 conn.commit()
-            else:
+            try:
                 return [dict(row._mapping) for row in res.fetchall()]
-            return None
+            except:
+                return None
 
     def get_task_by_id(self, task_id: int) -> Task:
         query = f"""
             SELECT * FROM tasks
             WHERE id = :id
         """
-        return Task(**self.execute_query(query=query, params={"id": task_id})[0])
+        try:
+            return Task(**self.execute_query(query=query, params={"id": task_id})[0])
+        except IndexError:
+            return 404
 
     def get_tasks(self, status_filter: list, order: str) -> list:
-        status_filter_clause = f"WHERE status = ANY(ARRAY{status_filter})" if status_filter else ""
-
-        name_order, deadline_order = order.split('_')
-        name_order = name_order.lower() if name_order.lower() in ('asc', 'desc') else 'asc'
-        deadline_order = deadline_order.lower(
-        ) if deadline_order.lower() in ('asc', 'desc') else 'asc'
 
         query = f"""
-            SELECT * FROM tasks
-            {status_filter_clause}
-            ORDER BY name {name_order}, deadline {deadline_order}
+            SELECT tasks.id, tasks.name, tasks.description, tasks.status, tasks.deadline, users.username FROM tasks
+            JOIN users ON tasks.created_by = users.id
         """
         return self.execute_query(query=query)
 
-    def create_task(self, task_data: Task) -> None:
+    def create_task(self, task_data: Task, creator: int) -> None:
         query = """
             INSERT INTO tasks(name, description, status, deadline, created_by)
             VALUES(
@@ -51,13 +48,14 @@ class DB():
                 :deadline,
                 :created_by
             )
+            RETURNING *
         """
         return self.execute_query(query, {
             "name": task_data.name,
             "description": task_data.description,
             "status": task_data.status,
             "deadline": task_data.deadline,
-            "created_by": task_data.created_by
+            "created_by": creator
         }, commit=True)
 
     def update_task(self, task_id: int, task_data: Task) -> None:
@@ -130,3 +128,10 @@ class DB():
             "email": email
         })
         return res[0]
+
+    def delete_task(self, task_id: int) -> None:
+        query = f"""
+            DELETE FROM tasks
+            WHERE id = :id
+        """
+        return self.execute_query(query=query, params={"id": task_id}, commit=True)
