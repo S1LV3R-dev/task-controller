@@ -1,18 +1,16 @@
 <script lang="ts" setup>
-
-import { register } from "@/utils/functions"
-import { ref } from "vue";
-import { RouterLink } from "vue-router";
+import { register } from '@/utils/functions'
+import { ref } from 'vue'
+import { RouterLink } from 'vue-router'
 
 const username = ref('')
 const email = ref('')
 const password = ref('')
-
 </script>
 
 <template>
   <div class="container d-flex align-items-center justify-content-center min-vh-100">
-    <div class="card shadow" style="width: 100%; max-width: 400px;">
+    <div class="card shadow" style="width: 100%; max-width: 400px">
       <div class="card-body">
         <h3 class="card-title text-center mb-4">Create an Account</h3>
         <div class="mb-3 text-center">
@@ -30,7 +28,8 @@ const password = ref('')
             type="text"
             class="form-control"
             placeholder="Enter username"
-            v-model="username">
+            v-model="username"
+          />
         </div>
         <div class="mb-3">
           <label for="email" class="form-label">Email</label>
@@ -39,7 +38,8 @@ const password = ref('')
             type="email"
             class="form-control"
             placeholder="Enter email"
-            v-model="email">
+            v-model="email"
+          />
         </div>
         <div class="mb-3">
           <label for="password" class="form-label">Password</label>
@@ -48,7 +48,8 @@ const password = ref('')
             type="password"
             class="form-control"
             placeholder="Enter password"
-            v-model="password">
+            v-model="password"
+          />
         </div>
         <button @click="register(username, email, password)" class="btn btn-primary w-100">
           Register

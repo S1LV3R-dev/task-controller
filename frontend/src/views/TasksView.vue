@@ -1,12 +1,12 @@
 <script lang="ts" setup>
-import { ref, onBeforeUnmount, onBeforeMount } from 'vue';
-import { useRouter } from 'vue-router';
-import { get_tasks, delete_task, logout, change_status } from '@/utils/functions';
-import { TASK_STATUS } from '@/utils/task_configs';
+import { ref, onBeforeUnmount, onBeforeMount } from 'vue'
+import { useRouter } from 'vue-router'
+import { get_tasks, delete_task, logout, change_status } from '@/utils/functions'
+import { TASK_STATUS } from '@/utils/task_configs'
 
-const router = useRouter();
-const tasks = ref([]);
-const ws = ref<WebSocket | null>(null);
+const router = useRouter()
+const tasks = ref([])
+const ws = ref<WebSocket | null>(null)
 
 const columns = [
   { field: 'id', hidden: true },
@@ -42,7 +42,7 @@ const columns = [
   },
   { label: 'Created by', field: 'username' },
   { label: 'Actions', field: 'actions', sortable: false, html: true },
-];
+]
 
 const paginationOptions = {
   enabled: true,
@@ -57,56 +57,56 @@ const paginationOptions = {
   ofLabel: 'of',
   pageLabel: 'page',
   allLabel: 'All',
-};
+}
 
 async function fetchTasks() {
   try {
-    const response = await get_tasks();
-    tasks.value = response.map(task => ({
+    const response = await get_tasks()
+    tasks.value = response.map((task) => ({
       ...task,
       deadline: task.deadline.split('.')[0],
-    }));
+    }))
   } catch (error) {
-    console.error('Error fetching tasks:', error);
+    console.error('Error fetching tasks:', error)
   }
 }
 
 async function deleteTask(taskId: string) {
   try {
-    await delete_task(taskId);
-    tasks.value = tasks.value.filter(task => task.id !== taskId);
+    await delete_task(taskId)
+    tasks.value = tasks.value.filter((task) => task.id !== taskId)
   } catch (error) {
-    console.error('Error deleting task:', error);
+    console.error('Error deleting task:', error)
   }
 }
 
 function setupWebSocket() {
-  ws.value = new WebSocket('ws://localhost:8000/ws/tasks');
+  ws.value = new WebSocket('ws://localhost:8000/ws/tasks')
 
-  ws.value.onmessage = event => {
-    const { task_id, status } = JSON.parse(event.data);
-    const task = tasks.value.find(t => t.id === task_id);
-    if (task) task.status = status;
-  };
+  ws.value.onmessage = (event) => {
+    const { task_id, status } = JSON.parse(event.data)
+    const task = tasks.value.find((t) => t.id === task_id)
+    if (task) task.status = status
+  }
 }
 
 async function logoutUser() {
   try {
-    await logout();
-    router.push('/login');
+    await logout()
+    router.push('/login')
   } catch (error) {
-    console.error('Error logging out:', error);
+    console.error('Error logging out:', error)
   }
 }
 
 onBeforeMount(async () => {
-  await fetchTasks();
-  setupWebSocket();
-});
+  await fetchTasks()
+  setupWebSocket()
+})
 
 onBeforeUnmount(() => {
-  ws.value?.close();
-});
+  ws.value?.close()
+})
 </script>
 
 <template>
@@ -115,12 +115,8 @@ onBeforeUnmount(() => {
       <div class="card-header d-flex justify-content-between align-items-center">
         <h4 class="mb-0">Tasks</h4>
         <div>
-          <RouterLink to="/tasks/new" class="btn btn-primary me-2">
-            Create Task
-          </RouterLink>
-          <button @click="logoutUser" class="btn btn-secondary">
-            Logout
-          </button>
+          <RouterLink to="/tasks/new" class="btn btn-primary me-2"> Create Task </RouterLink>
+          <button @click="logoutUser" class="btn btn-secondary">Logout</button>
         </div>
       </div>
       <div class="card-body p-0">
@@ -146,11 +142,7 @@ onBeforeUnmount(() => {
                   v-model="props.row.status"
                   @change="change_status(props.row.id, props.row.status)"
                 >
-                  <option
-                    v-for="(label, key) in TASK_STATUS.dict"
-                    :value="key"
-                    :key="key"
-                  >
+                  <option v-for="(label, key) in TASK_STATUS.dict" :value="key" :key="key">
                     {{ label }}
                   </option>
                 </select>
@@ -165,4 +157,3 @@ onBeforeUnmount(() => {
     </div>
   </div>
 </template>
-
