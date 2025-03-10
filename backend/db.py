@@ -30,7 +30,7 @@ class DB():
         except IndexError:
             return 404
 
-    def get_tasks(self, status_filter: list, order: str) -> list:
+    def get_tasks(self) -> list:
 
         query = f"""
             SELECT tasks.id, tasks.name, tasks.description, tasks.status, tasks.deadline, users.username FROM tasks

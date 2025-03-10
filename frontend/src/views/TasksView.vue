@@ -62,7 +62,7 @@ const paginationOptions = {
 async function fetchTasks() {
   try {
     const response = await get_tasks()
-    tasks.value = response.map((task) => ({
+    tasks.value = response.map((task: { id: number; status: number; deadline: string }) => ({
       ...task,
       deadline: task.deadline.split('.')[0],
     }))
@@ -74,7 +74,7 @@ async function fetchTasks() {
 async function deleteTask(taskId: string) {
   try {
     await delete_task(taskId)
-    tasks.value = tasks.value.filter((task) => task.id !== taskId)
+    tasks.value = tasks.value.filter((task: { id: string }) => task.id !== taskId)
   } catch (error) {
     console.error('Error deleting task:', error)
   }
@@ -85,8 +85,10 @@ function setupWebSocket() {
 
   ws.value.onmessage = (event) => {
     const { task_id, status } = JSON.parse(event.data)
-    const task = tasks.value.find((t) => t.id === task_id)
-    if (task) task.status = status
+    const task = tasks.value.find((t: { id: string }) => t.id === task_id)
+    if (task) {
+      ;(task as { id: number; status: number }).status = status
+    }
   }
 }
 
@@ -120,7 +122,7 @@ onBeforeUnmount(() => {
         </div>
       </div>
       <div class="card-body p-0">
-        <div class="table-responsive">
+        <div class="table-responsive" style="overflow-x: auto">
           <vue-good-table
             :columns="columns"
             :rows="tasks"
@@ -129,13 +131,39 @@ onBeforeUnmount(() => {
           >
             <template #table-row="props">
               <span v-if="props.column.field === 'actions'">
-                <RouterLink :to="`/tasks/${props.row.id}`" class="btn btn-sm btn-outline-info me-2">
-                  Edit
-                </RouterLink>
-                <button @click="deleteTask(props.row.id)" class="btn btn-sm btn-outline-danger">
-                  Delete
-                </button>
+                <div class="d-none d-md-block">
+                  <RouterLink
+                    :to="`/tasks/${props.row.id}`"
+                    class="btn btn-sm btn-outline-info me-2"
+                  >
+                    Edit
+                  </RouterLink>
+                  <button @click="deleteTask(props.row.id)" class="btn btn-sm btn-outline-danger">
+                    Delete
+                  </button>
+                </div>
+                <div class="d-block d-md-none">
+                  <button
+                    class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                    data-bs-toggle="dropdown"
+                  >
+                    Actions
+                  </button>
+                  <ul class="dropdown-menu form-select">
+                    <li>
+                      <RouterLink :to="`/tasks/${props.row.id}`" class="dropdown-item"
+                        >Edit</RouterLink
+                      >
+                    </li>
+                    <li>
+                      <button @click="deleteTask(props.row.id)" class="dropdown-item text-danger">
+                        Delete
+                      </button>
+                    </li>
+                  </ul>
+                </div>
               </span>
+
               <span v-else-if="props.column.field === 'status'">
                 <select
                   class="form-select form-select-sm"
@@ -157,3 +185,31 @@ onBeforeUnmount(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+@media (max-width: 768px) {
+  .custom-table {
+    font-size: 12px;
+  }
+
+  .form-select-sm {
+    font-size: 12px;
+  }
+}
+
+.custom-table select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: none;
+}
+
+.custom-table select:focus {
+  outline: none;
+  border: 1px solid #aaa;
+}
+
+.form-select {
+  padding: 0.25rem !important;
+}
+</style>

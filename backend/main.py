@@ -30,19 +30,13 @@ manager = ConnectionManager()
 app = FastAPI()
 db = DB()
 
-origins = [
-    "http://localhost",
-    "http://localhost:5173",
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 def gen_token(user_id: int) -> str:
     return f"""{user_id}:{str(jwt.encode({
@@ -76,21 +70,24 @@ def gen_response_with_token(user_data, error_string):
 
 @app.middleware("http")
 async def check_cookie_middleware(request: Request, call_next):
-    if request.method == "OPTIONS":
-        headers = {
+    CORS_headers = {
             "Access-Control-Allow-Origin": request.headers.get("Origin", "*"),
             "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS,PATCH",
             "Access-Control-Allow-Headers": request.headers.get("Access-Control-Request-Headers", "*"),
             "Access-Control-Allow-Credentials": "true",
         }
-        return Response(status_code=200, headers=headers)
+    if request.method == "OPTIONS":
+        return Response(status_code=200, headers=CORS_headers)
+
     renew = None
+
     if request.url.path not in ["/register", "/login", "/"]:
         token_str = request.cookies.get("token")
         if not token_str:
             return JSONResponse(
                 {"detail": "Not authenticated"},
                 status_code=status.HTTP_403_FORBIDDEN,
+                headers=CORS_headers
             )
         else:
             user_id, token = token_str.split(":")
@@ -98,14 +95,16 @@ async def check_cookie_middleware(request: Request, call_next):
                 jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
             except jwt.ExpiredSignatureError:
                 response = JSONResponse(
-                    {"details": ""},
-                    status_code=status.HTTP_200_OK
+                    {"details": "Token expired"},
+                    status_code=status.HTTP_200_OK,
+                    headers=CORS_headers
                 )
                 renew = True
             except jwt.InvalidTokenError:
                 return JSONResponse(
                     {"detail": "Invalid token."},
-                    status_code=status.HTTP_403_FORBIDDEN
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    headers=CORS_headers
                 )
 
     response = await call_next(request)
@@ -113,7 +112,6 @@ async def check_cookie_middleware(request: Request, call_next):
         response.set_cookie(key='token', value=gen_token(user_id),
                             httponly=True, max_age=4000)
     return response
-
 
 @app.post('/register')
 def register(
@@ -133,8 +131,6 @@ def login(
     login_str: str = Body(...),
     password: str = Body(...)
 ):
-    print(f'{login_str=}')
-    print(f'{password=}')
     res = db.login(login_str, password_encode(password))
     response = gen_response_with_token(res, "Invalid credentials")
     if response.status_code != status.HTTP_200_OK:
@@ -151,8 +147,8 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 @app.get('/tasks')
-def get_tasks(status_filter: List[int] = Query([]), order: str = 'asc_asc'):
-    return db.get_tasks(status_filter, order)
+def get_tasks():
+    return db.get_tasks()
 
 
 @app.get('/tasks/{task_id}')

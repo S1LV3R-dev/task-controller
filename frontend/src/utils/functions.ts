@@ -1,28 +1,12 @@
-import axios from 'axios'
-import router from '@/router/index'
-import { useToast } from 'vue-toastification'
+import api from '@/utils/api'
+import router from '@/router'
+import { createToastInterface } from 'vue-toastification'
 
-axios.defaults.withCredentials = true
-const toast = useToast()
-
-// ✅ Global Axios Response Interceptor for 403 Errors
-axios.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 403) {
-      const requestUrl = error.config.url
-      if (!requestUrl?.includes('/login') && !requestUrl?.includes('/register')) {
-        toast.error('Invalid authentication token. Please login again.')
-        router.replace('/login')
-      }
-    }
-    return Promise.reject(error)
-  },
-)
+const toast = createToastInterface()
 
 export async function login(login_str: string, password: string) {
-  return axios
-    .post('http://localhost:8000/login', { login_str, password })
+  return api
+    .post('/login', { login_str, password }) // ✅ Base URL is now handled in api.ts
     .then(() => router.push('/'))
     .catch((error) => {
       if (error.response?.status === 401) toast.error('Invalid credentials')
@@ -30,8 +14,8 @@ export async function login(login_str: string, password: string) {
 }
 
 export async function register(username: string, email: string, password: string) {
-  return axios
-    .post('http://localhost:8000/register', { username, email, password })
+  return api
+    .post('/register', { username, email, password })
     .then(() => router.push('/'))
     .catch((error) => {
       if (error.response?.status === 409) toast.error('Email already in use')
@@ -39,38 +23,31 @@ export async function register(username: string, email: string, password: string
 }
 
 export async function get_tasks() {
-  return axios.get('http://localhost:8000/tasks').then((response) => response.data)
+  return api.get('/tasks').then((response) => response.data)
 }
 
-export async function get_task_by_id(task_id: number) {
-  return axios.get(`http://localhost:8000/tasks/${task_id}`).then((response) => response.data)
+export async function get_task_by_id(task_id: string) {
+  return api.get(`/tasks/${task_id}`).then((response) => response.data)
 }
 
 export async function update_task(
-  task_id: number,
+  task_id: string,
   taskTitle: string,
   taskDescription: string,
   deadline: Date,
   status: number,
 ) {
-  return axios
+  return api
     .put(
-      `http://localhost:8000/tasks/${task_id}`,
-      {
-        name: taskTitle,
-        description: taskDescription,
-        deadline,
-        status,
-      },
-      {
-        headers: { 'Content-Type': 'application/json' },
-      },
+      `/tasks/${task_id}`,
+      { name: taskTitle, description: taskDescription, deadline, status },
+      { headers: { 'Content-Type': 'application/json' } },
     )
     .then((response) => response.data)
 }
 
-export async function delete_task(task_id: number) {
-  return axios.delete(`http://localhost:8000/tasks/${task_id}`).then((response) => response.data)
+export async function delete_task(task_id: string) {
+  return api.delete(`/tasks/${task_id}`).then((response) => response.data)
 }
 
 export async function create_task(
@@ -79,22 +56,23 @@ export async function create_task(
   deadline: Date,
   status: number,
 ) {
-  return axios
-    .post('http://localhost:8000/tasks', {
-      name: taskTitle,
-      description: taskDescription,
-      deadline,
-      status,
-    })
+  return api
+    .post('/tasks', { name: taskTitle, description: taskDescription, deadline, status })
     .then((response) => response.data[0])
 }
 
 export async function change_status(task_id: number, status: number) {
-  return axios
-    .patch(`http://localhost:8000/tasks/${task_id}?status=${status}`)
-    .then((response) => response.data)
+  return api.patch(`/tasks/${task_id}?status=${status}`).then((response) => response.data)
 }
 
 export async function logout() {
-  return axios.post('http://localhost:8000/logout')
+  return api
+    .post('/logout')
+    .then(() => {
+      router.replace('/login') // ✅ Redirect to login after logout
+    })
+    .catch((error) => {
+      console.error('Logout Error:', error)
+      toast.error('Failed to logout')
+    })
 }

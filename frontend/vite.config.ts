@@ -15,4 +15,11 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  preview: {
+    port: 3000,
+  },
+  server: {
+    host: "0.0.0.0",  // Allows external access (Docker)
+    port: 5000,
+  }
 })
